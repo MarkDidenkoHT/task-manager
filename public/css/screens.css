@@ -1,0 +1,165 @@
+/* Главная */
+.today-card {
+  display: flex;
+  align-items: center;
+  gap: var(--s4);
+}
+.today-card .lines {
+  flex: 1;
+}
+.reminder-card .time {
+  font-weight: 700;
+  font-size: 17px;
+}
+.reminder-card .streak {
+  font-size: 13px;
+  color: var(--c-growth);
+  margin-top: 4px;
+}
+.reminder-card.done {
+  opacity: 0.6;
+}
+
+/* План питания */
+.meal {
+  padding: var(--s3) 0;
+}
+.meal + .meal {
+  border-top: 0.5px solid var(--sep);
+}
+.meal-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s2);
+  margin-bottom: 4px;
+}
+.meal-no {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--fill);
+  font-size: 12px;
+  font-weight: 700;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+}
+.meal-name {
+  font: 600 13px/1.2 var(--font);
+  text-transform: uppercase;
+  color: var(--hint);
+  letter-spacing: 0.02em;
+}
+.meal-kcal {
+  margin-left: auto;
+  font-size: 13px;
+  color: var(--hint);
+}
+.meal-items {
+  padding-left: 30px;
+  font-size: 15px;
+}
+.store-compare {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  font-size: 14px;
+  margin-top: var(--s2);
+}
+.store-compare .best {
+  color: var(--ok);
+  font-weight: 600;
+}
+.target-row {
+  display: grid;
+  grid-template-columns: 70px 1fr auto;
+  align-items: center;
+  gap: var(--s2);
+  font-size: 14px;
+  padding: 4px 0;
+}
+
+/* Продукт */
+.macro-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  text-align: center;
+  gap: var(--s2);
+}
+.macro-grid .v {
+  font-weight: 700;
+  font-size: 18px;
+}
+.macro-grid .l {
+  font-size: 12px;
+  color: var(--hint);
+}
+
+/* Тренировка */
+.set-chips {
+  display: flex;
+  gap: var(--s2);
+  flex-wrap: wrap;
+  margin: var(--s3) 0;
+}
+.set-chip {
+  min-width: 52px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--fill);
+  font-weight: 700;
+  font-size: 17px;
+  display: grid;
+  place-items: center;
+  padding: 0 10px;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+.set-chip.hit {
+  background: color-mix(in srgb, var(--ok) 18%, transparent);
+  color: var(--ok);
+}
+.set-chip.miss {
+  background: color-mix(in srgb, var(--warn) 20%, transparent);
+  color: var(--warn);
+}
+.suggest {
+  font-size: 14px;
+  color: var(--c-growth);
+  margin-top: 4px;
+}
+.ex-img {
+  border-radius: 12px;
+  background: var(--fill);
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  width: 100%;
+}
+.ex-imgs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s2);
+}
+
+.weekday-chips .chip {
+  min-width: 40px;
+  padding: 0;
+  justify-content: center;
+}
+
+/* Покупки по дням */
+.day-head {
+  font: 600 13px/1.2 var(--font);
+  color: var(--hint);
+  margin: var(--s4) var(--s4) var(--s2);
+  display: flex;
+  justify-content: space-between;
+}
+
+/* Список покупок */
+.grocery-total {
+  position: sticky;
+  bottom: calc(var(--tabbar-h) + var(--safe-b) + var(--s2));
+  margin-top: var(--s3);
+}

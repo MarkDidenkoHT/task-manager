@@ -1,0 +1,59 @@
+:root {
+  --bg: var(--tg-theme-secondary-bg-color, #f1f1f4);
+  --card: var(--tg-theme-bg-color, #ffffff);
+  --text: var(--tg-theme-text-color, #111111);
+  --hint: var(--tg-theme-hint-color, #8a8a8f);
+  --accent: var(--tg-theme-button-color, #2481cc);
+  --accent-text: var(--tg-theme-button-text-color, #ffffff);
+  --link: var(--tg-theme-link-color, var(--accent));
+  --destructive: var(--tg-theme-destructive-text-color, #e5484d);
+  --sep: color-mix(in srgb, var(--text) 12%, transparent);
+  --fill: color-mix(in srgb, var(--text) 6%, transparent);
+  --ok: #2fb457;
+  --warn: #f0a020;
+  --bad: #e5484d;
+  --c-food: #34a853;
+  --c-money: #2f80ed;
+  --c-growth: #f2994a;
+  --c-pet: #9b51e0;
+  --tier-cheap: var(--ok);
+  --tier-mid: var(--c-money);
+  --tier-top: #c9a227;
+  --r-card: 16px;
+  --r-btn: 12px;
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 24px;
+  --s6: 32px;
+  --tabbar-h: 56px;
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --safe-t: var(--tg-content-safe-area-inset-top, 0px);
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+:root[data-scheme="dark"] {
+  --bg: var(--tg-theme-secondary-bg-color, #0f0f10);
+  --card: var(--tg-theme-bg-color, #1c1c1e);
+  --text: var(--tg-theme-text-color, #f2f2f2);
+  --hint: var(--tg-theme-hint-color, #8d8e93);
+  --ok: #3ecf6e;
+  --warn: #ffb340;
+  --bad: #ff6369;
+  --c-food: #4cc26a;
+  --c-money: #5a9cf5;
+  --c-growth: #ffab5c;
+  --c-pet: #b57bee;
+  --tier-top: #e0bd4a;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 400 16px/1.35 var(--font);
+  font-variant-numeric: tabular-nums;
+  padding-bottom: calc(var(--tabbar-h) + var(--safe-b));
+  -webkit-tap-highlight-color: transparent;
+}
