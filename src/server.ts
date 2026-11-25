@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import Fastify from 'fastify';
 import fastifyStatic from '@fastify/static';
 import { authenticate } from './auth.js';
-import { botRoutes } from './bot.js';
+import { resolveBotUsername } from './bot.js';
 import { checkConfig, config } from './config.js';
 import { errorHandler } from './http.js';
 import { budgetRoutes } from './routes/budget.js';
@@ -41,8 +41,6 @@ export async function buildServer() {
     { prefix: '/api' }
   );
 
-  botRoutes(app);
-
   // Статический фронтенд без сборки. Файлы всегда перепроверяются (ETag), поэтому
   // обновления приходят сразу; index.html получает номер версии для скрипта приложения.
   const indexHtml = readFileSync(join(publicDir, 'index.html'), 'utf8').replaceAll('__VERSION__', version);
@@ -65,4 +63,5 @@ if (isMain) {
   if (missing.length) console.warn('⚠ Не заданы переменные окружения: ' + missing.join(', '));
   const app = await buildServer();
   await app.listen({ port: config.port, host: '0.0.0.0' });
+  await resolveBotUsername(app.log);
 }

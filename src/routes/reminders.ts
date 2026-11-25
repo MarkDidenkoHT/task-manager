@@ -59,19 +59,6 @@ export async function remindersWithStreaks(spaceId: string, onlyTgId?: number) {
   });
 }
 
-/** Для workout-напоминания: какой день программы сегодня. */
-export async function programDayFor(r: Pick<ReminderRow, 'id' | 'program_id' | 'program_day_id'>) {
-  if (!r.program_id) return null;
-  const days = await q<{ id: string; day_idx: number; part: string; label: string }[]>(
-    db().from('program_days').select('*').eq('program_id', r.program_id).order('day_idx').order('part')
-  );
-  if (!days.length) return null;
-  if (r.program_day_id) return days.find((d) => d.id === r.program_day_id) ?? days[0];
-  // Ротация по числу выполненных тренировок.
-  const done = await q<{ id: string }[]>(db().from('reminder_events').select('id').eq('reminder_id', r.id).eq('status', 'done'));
-  return days[done.length % days.length];
-}
-
 export function reminderRoutes(app: FastifyInstance) {
   app.get('/spaces/:sid/reminders', async (req) => {
     const ctx = await requireSpace(req, 'read');

@@ -26,17 +26,19 @@
 
 ```
 Telegram ──открывает Mini App──> Render: Fastify (Node.js, TypeScript)
-                                  ├─ /            статика public/ (HTML, CSS, JS-модули, без сборки)
-                                  ├─ /api/*       проверка initData (HMAC), роли, Supabase
-                                  ├─ /bot         вебхук бота (кнопки напоминаний, /start)
-                                  └─ /internal/tick   вызывается pg_cron раз в минуту
+                                  ├─ /        статика public/ (HTML, CSS, JS-модули, без сборки)
+                                  └─ /api/*   проверка initData (HMAC), роли, данные
                                          │
                                          v
-                                  Supabase Postgres (RLS включён без политик; доступ только у сервера)
+                                  Supabase
+                                  ├─ Postgres (RLS включён без политик; доступ только у сервера и функций)
+                                  ├─ Edge Function reminders     ← Supabase Cron раз в минуту, шлёт напоминания
+                                  └─ Edge Function telegram-bot  ← вебхук: кнопки «Готово / Отложить / Пропустить», /start
 ```
 
-- Личность пользователя — только из подписанного `initData` Telegram (HMAC-SHA256, срок 24 ч).
+- Личность пользователя — только из подписанного `initData` Telegram (HMAC-SHA256 на ключе из токена бота, срок 24 ч).
 - Браузер никогда не обращается к Supabase. Сервер использует секретный ключ и сам проверяет членство и роль в пространстве на каждом запросе.
+- Напоминания целиком в Supabase: сервер на Render для них не нужен, поэтому его засыпание на бесплатном плане им не мешает.
 - Все суммы хранятся в копейках (целые числа).
 
 ```
@@ -44,57 +46,53 @@ src/
   server.ts          Fastify, статика, подключение маршрутов
   auth.ts            проверка подписи initData
   access.ts          роли: owner / editor / viewer
-  bot.ts             Telegram Bot API, вебхук, тик напоминаний
+  bot.ts             имя бота (getMe) и отправка файлов
   routes/            spaces, people, budget, food, training, reminders
   lib/               mealEngine (HiGHS), targets (Миффлин — Сан-Жеор), tax, progression, streak
-  scripts/           seed-exercises, set-webhook
+  scripts/           seed-exercises
   tests/             модульные тесты логики
 public/              фронтенд без фреймворка и сборки
-supabase/            SQL: схема, стартовые программы, pg_cron
+supabase/
+  001_schema.sql, 002_seed_training.sql
+  functions/         Edge Functions: reminders, telegram-bot
+  config.toml        настройки функций
 ```
 
 ## Запуск
 
-### 1. Supabase
+### 1. Бот
 
-1. Откройте проект → **SQL Editor** и выполните по очереди:
-   - `supabase/001_schema.sql` — таблицы, представления цен, RLS, функция приглашений;
-   - `supabase/002_seed_training.sql` — встроенные упражнения и 5 стартовых программ (файл можно запускать повторно).
-2. **Project Settings → API**: скопируйте **секретный** ключ (`sb_secret_…` или `service_role`).
-   Публикуемый ключ `sb_publishable_…` для сервера не подходит: RLS запрещает ему всё, а браузер к базе не обращается.
+В [@BotFather](https://t.me/BotFather) создайте бота (`/newbot`) и сохраните токен.
 
-### 2. Бот
+### 2. Supabase: база
 
-1. В [@BotFather](https://t.me/BotFather) создайте бота (`/newbot`) — получите `BOT_TOKEN`.
-2. После деплоя (шаг 3) создайте Mini App: `/newapp` → URL сервиса. Короткое имя приложения укажите в `WEBAPP_SHORT_NAME` — тогда ссылки-приглашения будут вида `t.me/<бот>/<приложение>?startapp=…`.
-   Без него ссылки имеют вид `t.me/<бот>?startapp=…` — для них настройте у бота основное приложение (`/mybots → Bot Settings → Configure Mini App`).
+1. **SQL Editor** — выполните по очереди `supabase/001_schema.sql` и `supabase/002_seed_training.sql` (второй можно запускать повторно).
+2. **Project Settings → API** — скопируйте **секретный** ключ (`sb_secret_…`). Публикуемый `sb_publishable_…` серверу не подходит.
 
-### 3. Render
+### 3. Render: приложение
 
-1. **New → Blueprint** и укажите этот репозиторий — `render.yaml` создаст веб-сервис.
-2. Заполните переменные окружения (полный список — в `.env.example`):
+**New → Blueprint** → этот репозиторий. Заполните три переменные:
 
 | Переменная | Значение |
 |---|---|
-| `SUPABASE_URL` | `https://<проект>.supabase.co` |
+| `SUPABASE_URL` | уже указан |
 | `SUPABASE_SECRET_KEY` | секретный ключ Supabase |
-| `BOT_TOKEN`, `BOT_USERNAME` | токен и имя бота без `@` |
-| `WEBAPP_SHORT_NAME` | короткое имя Mini App (необязательно) |
-| `PUBLIC_URL` | адрес сервиса, например `https://life-planner.onrender.com` |
-| `TICK_SECRET`, `WEBHOOK_SECRET` | Render сгенерирует сам |
+| `BOT_TOKEN` | токен бота |
 
-3. Настройте бота (вебхук, кнопку меню, описание) — локально с теми же переменными в `.env`:
+Имя бота сервер узнаёт у Telegram сам. После деплоя в @BotFather: `/mybots → бот → Bot Settings → Configure Mini App` — укажите адрес сервиса (так работают ссылки-приглашения `t.me/<бот>?startapp=…`).
+
+### 4. Supabase: бот и напоминания
 
 ```powershell
-npm run set-webhook
+npx supabase login
+npx supabase link --project-ref muzkjlwstmeodcoxtqlx
+npx supabase secrets set BOT_TOKEN=<токен> APP_URL=https://<сервис>.onrender.com
+npx supabase functions deploy reminders
+npx supabase functions deploy telegram-bot
 ```
 
-> Бесплатный инстанс Render засыпает: первое открытие и нажатия кнопок в напоминаниях могут задерживаться. Для напоминаний лучше платный план (`plan: starter` в `render.yaml`).
-
-### 4. Напоминания (pg_cron)
-
-1. Supabase → **Database → Extensions**: включите `pg_cron` и `pg_net`.
-2. В `supabase/003_cron.sql` замените `APP_URL` и `TICK_SECRET` и выполните файл.
+1. Откройте один раз в браузере `https://muzkjlwstmeodcoxtqlx.supabase.co/functions/v1/telegram-bot?setup` — функция зарегистрирует себя вебхуком бота и поставит кнопку меню.
+2. **Integrations → Cron → Create job**: тип **Supabase Edge Function**, функция `reminders`, расписание `* * * * *` (каждую минуту).
 
 ### 5. Библиотека упражнений (необязательно)
 
@@ -110,11 +108,11 @@ npm run seed:exercises
 
 ```powershell
 npm install
-Copy-Item .env.example .env
+Copy-Item .env.example .env   # впишите SUPABASE_SECRET_KEY и BOT_TOKEN
 npm run dev
 ```
 
-Вне Telegram приложение открывается в обычном браузере в режиме разработки: запустите сервер с `DEV_AUTH=1` и откройте `http://localhost:3000/?dev=12345` (число — условный Telegram ID). В продакшене (`NODE_ENV=production`) этот режим отключён.
+Вне Telegram приложение открывается в обычном браузере в режиме разработки: при `DEV_AUTH=1` откройте `http://localhost:3000/?dev=12345` (число — условный Telegram ID). В продакшене (`NODE_ENV=production`) этот режим отключён.
 
 ```powershell
 npm test

@@ -2,16 +2,19 @@ function env(name: string, fallback = ''): string {
   return process.env[name] ?? fallback;
 }
 
+// Обязательны только SUPABASE_URL, SUPABASE_SECRET_KEY и BOT_TOKEN.
+// Напоминания и кнопки бота работают в Supabase Edge Functions (supabase/functions).
 export const config = {
   port: Number(env('PORT', '3000')),
   supabaseUrl: env('SUPABASE_URL'),
   supabaseKey: env('SUPABASE_SECRET_KEY') || env('SUPABASE_SERVICE_ROLE_KEY'),
+  /** Нужен для проверки подписи initData — это и есть вход пользователя. */
   botToken: env('BOT_TOKEN'),
-  botUsername: env('BOT_USERNAME'),
+  /** Узнаётся у Telegram (getMe) при запуске; нужен для ссылок-приглашений. */
+  botUsername: '',
+  /** Необязательно: короткое имя Mini App из @BotFather — ссылки вида t.me/<бот>/<имя>. */
   webappShortName: env('WEBAPP_SHORT_NAME'),
-  publicUrl: env('PUBLIC_URL').replace(/\/$/, ''),
-  tickSecret: env('TICK_SECRET'),
-  webhookSecret: env('WEBHOOK_SECRET'),
+  /** Только для локальной разработки: вход без Telegram (?dev=<id>). */
   devAuth: env('DEV_AUTH') === '1' && env('NODE_ENV') !== 'production',
   initDataMaxAgeSec: 24 * 60 * 60
 };
