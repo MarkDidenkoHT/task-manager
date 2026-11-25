@@ -6,13 +6,6 @@ import { cloudSet, haptic, selectionHaptic } from './tg.js';
 import { formSheet, html, listRow, openSheet, render, toast, toastError } from './ui.js';
 
 // Общие части экрана: шапка с переключателем пространств, вкладки, плавающая кнопка «+».
-
-
-
-
-
-
-
 export const TABS = [
   { path: '/', label: 'Главная', icon: 'home' },
   { path: '/food', label: 'Еда', icon: 'food' },
@@ -28,7 +21,7 @@ export function renderTabbar(path) {
   render(
     nav,
     html`${TABS.map(
-      (t) => html`<a href="#${t.path}" class="${t.path === first ? 'on' : ''}" data-tab="${t.path}">${icon(t.icon)}<span>${t.label}</span></a>`
+      (t) => html`<a href="#${t.path}" class="${t.path === first ? 'on' : ''}" data-tab="${t.path}" aria-current="${t.path === first ? 'page' : 'false'}"><span class="ti">${icon(t.icon)}</span><span>${t.label}</span></a>`
     )}`
   );
 }
@@ -39,16 +32,19 @@ document.addEventListener('click', (e) => {
 
 export const ROLE_LABEL = { owner: 'владелец', editor: 'редактор', viewer: 'наблюдатель' };
 
-export function header() {
+/** Шапка вкладки: пространство, валюта и крупный заголовок экрана. */
+export function header(title, eyebrow) {
   const space = get('space');
-  const cur = get('currency') === 'USD' ? '$' : '₽';
+  const name = space?.name || 'Пространство';
+  const usd = get('currency') === 'USD';
   return html`<div class="header">
-    <button class="space-switch" data-action="switch-space"><span class="ellipsis">${space?.name || 'Пространство'}</span>${icon('down')}</button>
+    <button class="space-switch" data-action="switch-space"><span class="avatar">${name.trim().charAt(0).toUpperCase()}</span><span class="ellipsis">${name}</span>${icon('down')}</button>
     <div class="header-right">
-      ${!canWrite() ? html`<span class="badge ro-badge">Только просмотр</span>` : ''}
-      <button class="chip square" data-action="toggle-currency" aria-label="Валюта">${cur}</button>
+      ${!canWrite() ? html`<span class="badge ro-badge">Просмотр</span>` : ''}
+      <button class="cur-switch" data-action="toggle-currency" aria-label="Валюта: ${usd ? 'доллары' : 'рубли'}"><span class="${usd ? '' : 'on'}">₽</span><span class="${usd ? 'on' : ''}">$</span></button>
     </div>
-  </div>`;
+  </div>
+  ${title ? html`<h1 class="screen-title">${eyebrow ? html`<span class="eyebrow">${eyebrow}</span>` : ''}${title}</h1>` : ''}`;
 }
 
 /** Обработчики шапки — подключаются к корню экрана. */

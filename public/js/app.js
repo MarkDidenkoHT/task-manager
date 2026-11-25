@@ -3,7 +3,7 @@ import { onRoute, route, start } from './router.js';
 import { clearFab, renderTabbar } from './shell.js';
 import { get, set } from './store.js';
 import { cloudGet, cloudSet, initTelegram, inTelegram } from './tg.js';
-import { html, render, toast, formFields, readFields, toastError } from './ui.js';
+import { html, render, toast, formFields, readFields, skeleton, toastError } from './ui.js';
 import { icon } from './icons.js';
 
 initTelegram();
@@ -54,7 +54,11 @@ onRoute((path) => {
 const root = document.getElementById('view');
 
 async function boot() {
-  render(root, html`<div class="card"><div class="skeleton sk-hero"></div><div class="skeleton sk-line"></div><div class="skeleton sk-line" style="width:70%"></div></div>`);
+  // Каркас сразу: панель вкладок и скелетон шапки — до ответа сервера.
+  renderTabbar(location.hash.slice(1) || '/');
+  render(root, html`<div class="header"><div class="skeleton" style="width:140px;height:28px;border-radius:999px"></div></div>
+    <div class="skeleton" style="width:55%;height:34px;margin:12px 0 24px"></div>
+    ${skeleton(4)}`);
   if (!inTelegram && !location.search.includes('dev=')) {
     console.info('Вне Telegram: используется режим разработки (?dev=<tg_id>, сервер с DEV_AUTH=1).');
   }

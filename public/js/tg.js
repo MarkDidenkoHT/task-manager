@@ -8,12 +8,6 @@ export function initTelegram() {
   wa.ready();
   wa.expand();
   wa.onEvent('themeChanged', applyScheme);
-  try {
-    wa.setHeaderColor('secondary_bg_color');
-    wa.setBackgroundColor('secondary_bg_color');
-  } catch {
-    /* старые клиенты */
-  }
   wa.onEvent('viewportChanged', onViewport);
   try {
     wa.disableVerticalSwipes?.();
@@ -22,9 +16,20 @@ export function initTelegram() {
   }
 }
 
+// Цвета шапки и фона Telegram совпадают с --bg и --card из tokens.css.
+const CHROME = { light: { bg: '#f2f2ee', bar: '#ffffff' }, dark: { bg: '#0d0e10', bar: '#18191c' } };
+
 function applyScheme() {
   const scheme = wa?.colorScheme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
   document.documentElement.dataset.scheme = scheme;
+  const c = CHROME[scheme] || CHROME.light;
+  try {
+    wa?.setHeaderColor?.(c.bg);
+    wa?.setBackgroundColor?.(c.bg);
+    wa?.setBottomBarColor?.(c.bar);
+  } catch {
+    /* старые клиенты */
+  }
 }
 
 function onViewport() {

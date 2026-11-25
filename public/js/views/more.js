@@ -25,7 +25,7 @@ export async function more(root) {
   const space = get('space');
   render(
     root,
-    html`${header()}
+    html`${header('Ещё')}
       ${sectionTitle('Семья')}
       <div class="list">
         ${listRow({ title: 'Люди и питомцы', subtitle: 'Профили, цели КБЖУ, приёмы пищи', iconName: 'people', iconCls: 'c-food', action: 'go', data: { to: '/more/people' } })}
@@ -43,7 +43,7 @@ export async function more(root) {
         ${listRow({ title: 'Настройки', subtitle: `Курс $: ${space?.usd_rate} ₽ · ${space?.timezone || ''}`, iconName: 'settings', iconCls: 'c-gray', action: 'go', data: { to: '/more/settings' } })}
         ${listRow({ title: 'Экспорт данных', subtitle: 'JSON-файл придёт в чат с ботом', iconName: 'download', iconCls: 'c-gray', action: 'export', chevron: false })}
       </div>
-      <p class="caption" style="margin:24px 16px;text-align:center">Планировщик · v0.1 · язык интерфейса: русский</p>`
+      <p class="caption footnote">Планировщик · v0.2</p>`
   );
   return { destroy: off };
 }

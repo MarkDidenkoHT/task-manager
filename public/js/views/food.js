@@ -29,7 +29,7 @@ export async function food(root) {
   let tab = q.get('tab') || 'plans';
   let stopInner = null;
 
-  render(root, html`${header()}${segmented('tab', TABS, tab)}<div id="tab-body"></div>`);
+  render(root, html`${header('Еда')}${segmented('tab', TABS, tab)}<div id="tab-body"></div>`);
   const body = root.querySelector('#tab-body');
   const offHeader = delegate(root, headerHandlers);
 

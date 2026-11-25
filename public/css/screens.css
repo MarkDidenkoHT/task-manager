@@ -1,43 +1,157 @@
-/* Главная */
+/* ---------- Главная ---------- */
+.money-card .hero {
+  font-size: 40px;
+}
+.money-card .meta {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--hint);
+}
+.money-card .bar {
+  margin-top: 16px;
+}
+
 .today-card {
   display: flex;
   align-items: center;
-  gap: var(--s4);
+  gap: 20px;
 }
 .today-card .lines {
   flex: 1;
+  min-width: 0;
 }
-.reminder-card .time {
-  font-weight: 700;
-  font-size: 17px;
+.today-card .lines .row + .row {
+  margin-top: 6px;
 }
-.reminder-card .streak {
-  font-size: 13px;
-  color: var(--c-growth);
-  margin-top: 4px;
+.today-card .ring {
+  width: 76px;
+  height: 76px;
 }
-.reminder-card.done {
-  opacity: 0.6;
+.macro-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--s2);
+  margin-top: 14px;
+}
+.macro-row > div {
+  background: var(--fill);
+  border-radius: 12px;
+  padding: 8px 10px;
+}
+.macro-row .l {
+  font-size: 12px;
+  color: var(--hint);
+  font-weight: 500;
+}
+.macro-row .v {
+  font-weight: 650;
+  font-size: 15px;
+  margin-top: 1px;
 }
 
-/* План питания */
+.reminder-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 118px;
+  padding: 14px 14px 14px 16px;
+}
+.reminder-card .time {
+  font: 700 20px/1.2 var(--font-display);
+  letter-spacing: -0.02em;
+}
+.reminder-card .title {
+  margin-top: 4px;
+  font-size: 15px;
+  font-weight: 500;
+}
+.reminder-card .streak {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--c-growth);
+  margin-top: auto;
+  padding-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.reminder-card .streak svg {
+  width: 14px;
+  height: 14px;
+}
+.reminder-card .mark {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  box-shadow: inset 0 0 0 2px var(--fill-2);
+  color: var(--hint);
+}
+.reminder-card .mark svg {
+  width: 16px;
+  height: 16px;
+  stroke-width: 2.4;
+}
+.reminder-card.done .mark {
+  background: var(--ok);
+  box-shadow: none;
+  color: #fff;
+}
+.reminder-card.done .title {
+  color: var(--hint);
+}
+
+/* ---------- Развитие ---------- */
+.growth-tiles {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.growth-tiles .card {
+  padding: 14px;
+  min-height: 128px;
+  display: flex;
+  flex-direction: column;
+}
+.growth-tiles .card + .card {
+  margin-top: 0;
+}
+.growth-tiles .card-title {
+  margin-top: 12px;
+  font-size: 15px;
+}
+.growth-tiles .caption {
+  margin-top: 2px;
+}
+.growth-tiles .streak {
+  margin-top: auto;
+  padding-top: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--c-growth);
+  min-height: 22px;
+}
+
+/* ---------- План питания ---------- */
 .meal {
   padding: var(--s3) 0;
 }
 .meal + .meal {
-  border-top: 0.5px solid var(--sep);
+  border-top: 1px solid var(--sep);
 }
 .meal-head {
   display: flex;
   align-items: baseline;
   gap: var(--s2);
-  margin-bottom: 4px;
+  margin-bottom: 6px;
 }
 .meal-no {
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  background: var(--fill);
+  background: var(--fill-2);
   font-size: 12px;
   font-weight: 700;
   display: inline-grid;
@@ -45,10 +159,8 @@
   flex: none;
 }
 .meal-name {
-  font: 600 13px/1.2 var(--font);
-  text-transform: uppercase;
-  color: var(--hint);
-  letter-spacing: 0.02em;
+  font: 600 14px/1.2 var(--font);
+  color: var(--text);
 }
 .meal-kcal {
   margin-left: auto;
@@ -58,6 +170,7 @@
 .meal-items {
   padding-left: 30px;
   font-size: 15px;
+  color: var(--text-2);
 }
 .store-compare {
   display: flex;
@@ -79,23 +192,44 @@
   padding: 4px 0;
 }
 
-/* Продукт */
+/* ---------- Профиль ---------- */
+/* Одинаковая высота в обоих состояниях: подсказка ↔ расчёт не сдвигает форму. */
+.target-preview {
+  height: 158px;
+  overflow: hidden;
+}
+.target-preview .empty-hint {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  color: var(--hint);
+  font-size: 14px;
+}
+
+/* ---------- Продукт ---------- */
 .macro-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   text-align: center;
   gap: var(--s2);
 }
+.macro-grid > div {
+  background: var(--fill);
+  border-radius: 12px;
+  padding: 10px 4px;
+}
 .macro-grid .v {
   font-weight: 700;
   font-size: 18px;
+  letter-spacing: -0.02em;
 }
 .macro-grid .l {
   font-size: 12px;
   color: var(--hint);
 }
 
-/* Тренировка */
+/* ---------- Тренировка ---------- */
 .set-chips {
   display: flex;
   gap: var(--s2);
@@ -103,9 +237,9 @@
   margin: var(--s3) 0;
 }
 .set-chip {
-  min-width: 52px;
-  height: 44px;
-  border-radius: 12px;
+  min-width: 54px;
+  height: 46px;
+  border-radius: 14px;
   background: var(--fill);
   font-weight: 700;
   font-size: 17px;
@@ -115,13 +249,14 @@
   user-select: none;
   -webkit-user-select: none;
   touch-action: manipulation;
+  transition: background 0.15s, color 0.15s;
 }
 .set-chip.hit {
-  background: color-mix(in srgb, var(--ok) 18%, transparent);
+  background: color-mix(in srgb, var(--ok) 16%, transparent);
   color: var(--ok);
 }
 .set-chip.miss {
-  background: color-mix(in srgb, var(--warn) 20%, transparent);
+  background: color-mix(in srgb, var(--warn) 18%, transparent);
   color: var(--warn);
 }
 .suggest {
@@ -130,7 +265,7 @@
   margin-top: 4px;
 }
 .ex-img {
-  border-radius: 12px;
+  border-radius: 14px;
   background: var(--fill);
   aspect-ratio: 4 / 3;
   object-fit: cover;
@@ -148,18 +283,24 @@
   justify-content: center;
 }
 
-/* Покупки по дням */
+/* ---------- Покупки по дням ---------- */
 .day-head {
   font: 600 13px/1.2 var(--font);
   color: var(--hint);
-  margin: var(--s4) var(--s4) var(--s2);
+  margin: var(--s5) 2px var(--s2);
   display: flex;
   justify-content: space-between;
 }
 
-/* Список покупок */
+/* ---------- Список покупок ---------- */
 .grocery-total {
   position: sticky;
   bottom: calc(var(--tabbar-h) + var(--safe-b) + var(--s2));
   margin-top: var(--s3);
+  box-shadow: var(--shadow-float);
+}
+
+.footnote {
+  margin: var(--s5) 4px 0;
+  text-align: center;
 }

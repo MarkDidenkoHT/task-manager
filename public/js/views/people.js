@@ -23,6 +23,30 @@ const GOALS = [
   { value: 300, label: 'Набор (+300)' }
 ];
 
+/** Полных лет по дате рождения. */
+function ageFrom(birth) {
+  if (!birth) return null;
+  const [y, m, d] = String(birth).slice(0, 10).split('-').map(Number);
+  const now = new Date();
+  let age = now.getFullYear() - y;
+  if (now < new Date(now.getFullYear(), m - 1, d)) age--;
+  return age;
+}
+
+/** Дата рождения из возраста: сегодня минус N лет — возраст будет расти сам. */
+function birthFromAge(age) {
+  const d = new Date();
+  d.setFullYear(d.getFullYear() - age);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function checkAge(age, kind) {
+  if (age == null) return;
+  const max = kind === 'child' ? 17 : 120;
+  const min = kind === 'child' ? 0 : 14;
+  if (!Number.isInteger(age) || age < min || age > max) throw new Error(`Возраст: целое число от ${min} до ${max}`);
+}
+
 /** Расчёт целей на клиенте — та же формула, что на сервере (для живого предпросмотра). */
 function previewTargets(v, kind) {
   if (kind === 'child') {
@@ -33,11 +57,8 @@ function previewTargets(v, kind) {
   const kg = v.weight_kg;
   let kcal = v.kcal_override;
   if (!kcal) {
-    if (!(kg && v.height_cm && v.birth_date && v.sex)) return null;
-    const b = new Date(v.birth_date);
-    const now = new Date();
-    let age = now.getFullYear() - b.getFullYear();
-    if (now < new Date(now.getFullYear(), b.getMonth(), b.getDate())) age--;
+    const age = v.age;
+    if (!(kg && v.height_cm && age && v.sex)) return null;
     const bmr = 10 * kg + 6.25 * v.height_cm - 5 * age + (v.sex === 'm' ? 5 : -161);
     kcal = bmr * (v.activity || 1.375) + (v.goal_offset_kcal || 0);
   }
@@ -105,7 +126,7 @@ export async function person(root, { id }) {
         : kind === 'child'
           ? [
               { name: 'name', label: 'Имя', required: true },
-              { name: 'birth_date', label: 'Дата рождения', type: 'date' },
+              { name: 'age', label: 'Возраст, лет', type: 'number', inputmode: 'numeric', placeholder: 'Например, 6' },
               { name: 'kcal_override', label: 'Калорий в день', type: 'number', inputmode: 'numeric', required: true, hint: 'Укажите по рекомендации врача или официальным нормам для возраста' },
               { name: 'meals_per_day', label: 'Приёмов пищи в день', type: 'stepper', min: 1, max: 6 },
               { name: 'active', label: 'Участвует в планах', type: 'toggle' }
@@ -113,9 +134,9 @@ export async function person(root, { id }) {
           : [
               { name: 'name', label: 'Имя', required: true },
               { name: 'sex', label: 'Пол', type: 'chips', small: true, options: [{ value: 'm', label: 'Мужской' }, { value: 'f', label: 'Женский' }] },
-              { name: 'birth_date', label: 'Дата рождения', type: 'date' },
-              { name: 'height_cm', label: 'Рост, см', type: 'number' },
-              { name: 'weight_kg', label: 'Вес, кг', type: 'number' },
+              { name: 'age', label: 'Возраст, лет', type: 'number', inputmode: 'numeric', placeholder: '30' },
+              { name: 'height_cm', label: 'Рост, см', type: 'number', inputmode: 'numeric', placeholder: '175' },
+              { name: 'weight_kg', label: 'Вес, кг', type: 'number', placeholder: '70' },
               { name: 'activity', label: 'Активность', type: 'select', numeric: true, options: ACTIVITY },
               { name: 'meals_per_day', label: 'Приёмов пищи в день', type: 'stepper', min: 1, max: 6 },
               { name: 'is_me', label: 'Это мой профиль', type: 'toggle' },
@@ -123,6 +144,7 @@ export async function person(root, { id }) {
             ];
     const wasMe = !!p && Number(p.tg_id) === Number(get('me')?.id);
     v.is_me = wasMe;
+    v.age = ageFrom(v.birth_date);
     const goalFields = kind === 'adult'
       ? [
           { name: 'goal_offset_kcal', label: 'Поправка к калориям, ккал', type: 'number', inputmode: 'numeric', hint: 'Отрицательная — похудение, положительная — набор' },
@@ -136,7 +158,7 @@ export async function person(root, { id }) {
     render(
       root,
       html`<h1 class="screen-title">${isNew ? `Новый профиль: ${KIND[kind].toLowerCase()}` : v.name}</h1>
-        ${kind !== 'pet' ? html`<div class="card" id="preview"></div>` : ''}
+        ${kind !== 'pet' ? html`<div class="card target-preview" id="preview"></div>` : ''}
         <div style="margin-top:12px">${formFields(fields, v)}</div>
         ${kind === 'adult'
           ? html`${sectionTitle('Цель')}
@@ -166,9 +188,9 @@ export async function person(root, { id }) {
       render(
         box,
         t
-          ? html`<div class="row between"><div class="stat"><div class="label">Цель в день</div><div class="hero md num">${fmt(t.kcal)} ккал</div></div>${icon('target')}</div>
-            <div class="macro-chips" style="margin-top:8px"><span class="macro">Б <b>${fmt(t.protein)} г</b></span><span class="macro">Ж <b>${fmt(t.fat)} г</b></span><span class="macro">У <b>${fmt(t.carbs)} г</b></span></div>`
-          : html`<p class="muted small">${kind === 'child' ? 'Укажите калорийность, чтобы увидеть БЖУ.' : 'Заполните пол, дату рождения, рост и вес — цель рассчитается по формуле Миффлина — Сан-Жеора.'}</p>`
+          ? html`<div class="stat"><div class="label">Цель в день</div><div class="hero md num">${fmt(t.kcal)} <span class="muted" style="font-size:16px;font-weight:500;letter-spacing:0">ккал</span></div></div>
+            <div class="macro-row"><div><div class="l">Белки</div><div class="v num">${fmt(t.protein)} г</div></div><div><div class="l">Жиры</div><div class="v num">${fmt(t.fat)} г</div></div><div><div class="l">Углеводы</div><div class="v num">${fmt(t.carbs)} г</div></div></div>`
+          : html`<div class="empty-hint"><div class="icon-chip c-food">${icon('target')}</div><span>${kind === 'child' ? 'Укажите калорийность — покажем БЖУ.' : 'Пол, возраст, рост и вес — и цель рассчитается по формуле Миффлина — Сан-Жеора.'}</span></div>`
       );
     };
     drawPreview();
@@ -214,8 +236,14 @@ export async function person(root, { id }) {
       setMainButton('Сохранить', async () => {
         try {
           const vals = readFields(root, all);
-          const { is_me: isMe, ...rest } = vals;
+          const { is_me: isMe, age, ...rest } = vals;
           const body = { ...rest, kind };
+          if (kind !== 'pet') {
+            checkAge(age, kind);
+            // Возраст не меняли — дату рождения не трогаем (иначе сдвинется день рождения).
+            if (age == null) body.birth_date = null;
+            else if (age !== ageFrom(v.birth_date)) body.birth_date = birthFromAge(age);
+          }
           if (kind === 'adult' && isMe !== wasMe) body.tg_id = isMe ? get('me')?.id : null;
           if (kind === 'adult') {
             body.goal_offset_kcal = Math.round(vals.goal_offset_kcal || 0);

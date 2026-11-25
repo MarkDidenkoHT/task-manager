@@ -54,9 +54,11 @@ export async function growth(root) {
     }
   });
   setFab(null);
+  render(root, html`${header('Развитие')}<div id="growth-body"></div>`);
+  const body = root.querySelector('#growth-body');
 
   const draw = () =>
-    load(root, () => Promise.all([api(sp('/programs')), api(sp('/reminders?mine=1'))]), ([programs, reminders]) => {
+    load(body, () => Promise.all([api(sp('/programs')), api(sp('/reminders?mine=1'))]), ([programs, reminders]) => {
       const group = (kinds) => reminders.filter((r) => kinds.includes(r.kind));
       const best = (list) => Math.max(0, ...list.map((r) => r.streak));
       const next = (list) => list.filter((r) => r.active).map((r) => r.local_time).sort()[0];
@@ -65,15 +67,15 @@ export async function growth(root) {
       const custom = group(['custom']);
       const card = (title, ic, list, to) => html`<div class="card tap" data-action="go" data-to="${to}">
         <div class="icon-chip c-growth">${icon(ic)}</div>
-        <div class="card-title" style="margin-top:8px">${title}</div>
-        <div class="caption">${next(list) ? `следующее в ${next(list)}` : 'нет напоминаний'}</div>
-        <div class="caption" style="color:var(--c-growth)">${best(list) ? `серия ${best(list)} ${plural(best(list), 'день', 'дня', 'дней')}` : ' '}</div>
+        <div class="card-title">${title}</div>
+        <div class="caption">${next(list) ? `в ${next(list)}` : 'нет напоминаний'}</div>
+        <div class="streak">${best(list) ? html`${icon('flame')} ${best(list)} ${plural(best(list), 'день', 'дня', 'дней')}` : ''}</div>
       </div>`;
       const reminderRows = (list, kind) =>
         html`<div class="list">${list.map((r) =>
           listRow({
             title: r.title,
-            subtitle: `${r.local_time} · ${r.weekdays.length === 7 ? 'каждый день' : r.weekdays.map((d) => WEEKDAYS[d - 1]).join(' ')}${r.streak ? ` · 🔥 ${r.streak}` : ''}`,
+            subtitle: `${r.local_time} · ${r.weekdays.length === 7 ? 'каждый день' : r.weekdays.map((d) => WEEKDAYS[d - 1]).join(' ')}${r.streak ? ` · серия ${r.streak}` : ''}`,
             iconName: kind === 'reading' ? 'book' : 'target',
             iconCls: 'c-growth',
             trail: r.today_status === 'done'
@@ -84,9 +86,8 @@ export async function growth(root) {
         )}${canWrite() ? listRow({ title: html`<span style="color:var(--link)">Добавить</span>`, iconName: 'plus', iconCls: 'c-gray', action: 'add-reminder', data: { kind }, chevron: false }) : ''}</div>`;
 
       render(
-        root,
-        html`${header()}
-          <div class="grid2" style="grid-template-columns:repeat(3,1fr)">
+        body,
+        html`<div class="growth-tiles">
             ${card('Спорт', 'dumbbell', sport, '/growth/reminders')}
             ${card('Чтение', 'book', reading, '/growth/reminders')}
             ${card('Свои цели', 'target', custom, '/growth/reminders')}

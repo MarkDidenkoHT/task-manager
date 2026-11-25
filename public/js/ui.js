@@ -172,9 +172,10 @@ export const hasOpenSheet = () => sheetStack.length > 0;
 
 // ---------- Общие элементы ----------
 export function skeleton(rows = 3, { hero = true } = {}) {
-  return html`<div class="card">${hero ? raw('<div class="skeleton sk-hero"></div>') : ''}${raw(
-    Array.from({ length: rows }, (_, i) => `<div class="skeleton sk-line" style="width:${90 - i * 12}%"></div>`).join('')
-  )}</div>`;
+  const row = '<div class="sk-row"><div class="skeleton sk-ic"></div><div class="skeleton sk-line"></div></div>';
+  return html`${hero
+    ? raw('<div class="card"><div class="skeleton sk-line" style="width:30%;margin-top:2px"></div><div class="skeleton sk-hero"></div><div class="skeleton sk-line" style="width:100%;height:6px"></div></div><div class="skeleton sk-title"></div>')
+    : ''}<div class="list">${raw(row.repeat(Math.max(1, rows)))}</div>`;
 }
 
 export function empty({ iconName = 'sparkle', text, action, label, cls = '' }) {
@@ -207,9 +208,8 @@ export function listRow({ title, subtitle, trail, iconName, iconCls = '', action
 
 export function segmented(name, options, value) {
   const idx = Math.max(0, options.findIndex((o) => o.value === value));
-  const w = 100 / options.length;
   return html`<div class="segmented" data-seg="${name}">
-    <span class="indicator" style="width:calc(${w}% - 2px);transform:translateX(calc(${idx * 100}% + ${idx * 2 / options.length}px))"></span>
+    <span class="indicator" style="width:calc((100% - 6px) / ${options.length});transform:translateX(${idx * 100}%)"></span>
     ${options.map((o) => html`<button type="button" data-seg-btn data-value="${o.value}" aria-pressed="${o.value === value}">${o.label}</button>`)}
   </div>`;
 }
@@ -275,7 +275,7 @@ document.addEventListener('click', (e) => {
     const btns = [...box.querySelectorAll('[data-seg-btn]')];
     const idx = btns.indexOf(seg);
     btns.forEach((b) => b.setAttribute('aria-pressed', String(b === seg)));
-    box.querySelector('.indicator').style.transform = `translateX(calc(${idx * 100}% + ${(idx * 2) / btns.length}px))`;
+    box.querySelector('.indicator').style.transform = `translateX(${idx * 100}%)`;
     selectionHaptic();
     box.dispatchEvent(new CustomEvent('segchange', { bubbles: true, detail: { name: box.dataset.seg, value: seg.dataset.value } }));
   }
@@ -412,11 +412,10 @@ export function ring(value, target, { size = 64, stroke = 7 } = {}) {
   const p = target > 0 ? Math.min(1, value / target) : 0;
   const over = target > 0 && value > target * 1.05;
   return raw(`<svg class="ring" viewBox="0 0 ${size} ${size}" style="width:${size}px;height:${size}px" role="img" aria-label="${Math.round(p * 100)}%">
-    <defs><linearGradient id="rg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="var(--c-food)"/><stop offset="1" stop-color="var(--ok)"/></linearGradient></defs>
-    <circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="var(--fill)" stroke-width="${stroke}"/>
-    <circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="${over ? 'var(--warn)' : 'url(#rg)'}" stroke-width="${stroke}" stroke-linecap="round"
+    <circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="var(--fill-2)" stroke-width="${stroke}"/>
+    <circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="${over ? 'var(--warn)' : 'var(--c-food)'}" stroke-width="${stroke}" stroke-linecap="round"
       stroke-dasharray="${c}" stroke-dashoffset="${c * (1 - p)}" transform="rotate(-90 ${size / 2} ${size / 2})"/>
-    <text x="50%" y="54%" text-anchor="middle" font-size="${size / 4.2}" font-weight="700" fill="var(--text)">${Math.round(p * 100)}%</text>
+    <text x="50%" y="50%" dy="0.35em" text-anchor="middle" font-size="${size / 4.4}" font-weight="700" fill="var(--text)">${Math.round(p * 100)}%</text>
   </svg>`);
 }
 
@@ -461,13 +460,24 @@ export const TIER_LABEL = { cheap: 'Дёшево', middle: 'Средний', top
 export const tierBadge = (tier) => html`<span class="badge tier-badge tier-${tier}">${TIER_LABEL[tier] || tier}</span>`;
 
 /** Загружает данные, показывая скелетон; при ошибке — карточку с повтором. */
-export async function load(root, loader, draw, { skeletonRows = 3 } = {}) {
-  render(root, skeleton(skeletonRows));
+export async function load(root, loader, draw, { skeletonRows = 3, hero = true } = {}) {
+  const first = root.dataset.loaded !== '1';
+  // Скелетон показываем только если данные не пришли мгновенно (кэш) — без мигания.
+  let skTimer = null;
+  if (first) skTimer = setTimeout(() => render(root, skeleton(skeletonRows, { hero })), 60);
   const run = async () => {
     try {
       const data = await loader();
+      clearTimeout(skTimer);
       await draw(data);
+      if (first) {
+        root.dataset.loaded = '1';
+        root.classList.remove('fade-in');
+        void root.offsetWidth;
+        root.classList.add('fade-in');
+      }
     } catch (e) {
+      clearTimeout(skTimer);
       console.error(e);
       render(root, errorCard(e, 'retry-load'));
       root.querySelector('[data-action="retry-load"]')?.addEventListener('click', () => {

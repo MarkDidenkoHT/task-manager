@@ -128,7 +128,7 @@ export async function reminders(root) {
                 const k = KINDS.find((x) => x.value === r.kind);
                 return listRow({
                   title: html`<span class="num" style="font-weight:600">${r.local_time}</span> ${r.title}`,
-                  subtitle: html`${r.weekdays.length === 7 ? 'каждый день' : r.weekdays.map((d) => WEEKDAYS[d - 1]).join(' ')}${r.streak ? html` · <span style="color:var(--c-growth)">🔥 ${r.streak} ${plural(r.streak, 'день', 'дня', 'дней')}</span>` : ''}`,
+                  subtitle: html`${r.weekdays.length === 7 ? 'каждый день' : r.weekdays.map((d) => WEEKDAYS[d - 1]).join(' ')}${r.streak ? html` · <span style="color:var(--c-growth)">серия ${r.streak} ${plural(r.streak, 'день', 'дня', 'дней')}</span>` : ''}`,
                   iconName: k?.icon || 'bell',
                   iconCls: r.kind === 'pet' ? 'c-pet' : r.kind === 'payment' ? 'c-money' : 'c-growth',
                   trail: canWrite() && Number(r.owner_tg_id) === Number(me) ? toggle('active', r.active, `data-toggle="${r.id}"`) : '',

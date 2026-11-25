@@ -42,8 +42,10 @@ function quickActions(onSaved) {
 
 export async function budget(root) {
   const off = delegate(root, { ...headerHandlers, go: (el) => go(el.dataset.to) });
+  render(root, html`${header('Бюджет')}<div id="budget-body"></div>`);
+  const body = root.querySelector('#budget-body');
   const draw = () =>
-    load(root, async () => {
+    load(body, async () => {
       const [s, plans] = await Promise.all([api(sp('/summary')), api(sp('/meal-plans'))]);
       return { s, active: plans.find((p) => p.status === 'active') };
     }, ({ s, active }) => {
@@ -56,9 +58,8 @@ export async function budget(root) {
         left: Math.max(0, s.remaining)
       };
       render(
-        root,
-        html`${header()}
-          <div class="card">
+        body,
+        html`<div class="card">
             <div class="stat"><div class="label">Свободно после обязательных</div><div class="hero ${s.free < 0 ? 'bad' : ''}">${moneyHtml(s.free)}</div></div>
             <div class="row between" style="margin-top:12px"><span class="muted">Осталось в этом месяце</span><b class="num ${s.remaining < 0 ? 'bad' : ''}">${m1(s.remaining)}</b></div>
             <div style="margin-top:12px">${stackBar(SEG.map((x) => ({ value: parts[x.key], color: x.color })), Math.max(s.income.net, s.fixed.total + s.spent.total))}</div>
@@ -123,7 +124,7 @@ export async function budget(root) {
                 data: { to: `/food/plan/${active.id}/check` }
               })}</div>`
             : ''}
-          <p class="caption" style="margin:16px">Курс: 1 $ = ${fmt(get('space')?.usd_rate, 2)} ₽ (меняется в настройках).</p>`
+          <p class="caption footnote">Курс: 1 $ = ${fmt(get('space')?.usd_rate, 2)} ₽ · меняется в настройках</p>`
       );
     }, { skeletonRows: 6 });
   setFab(quickActions(draw));

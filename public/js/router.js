@@ -35,7 +35,10 @@ export function onRoute(before, after) {
   afterEach = after;
 }
 
-export async function run() {
+export async function run(opts) {
+  // reload(): новый экран собирается вне документа и подменяет старый целиком,
+  // когда готов, — без скелетона, мигания и сброса прокрутки.
+  const keep = opts?.keep === true;
   const id = ++runId;
   const path = currentPath();
   for (const r of routes) {
@@ -53,9 +56,19 @@ export async function run() {
     // Новый контейнер на каждый экран: обработчики событий прошлого экрана не накапливаются.
     const old = document.getElementById('view');
     const root = old.cloneNode(false);
-    old.replaceWith(root);
-    window.scrollTo(0, 0);
+    root.removeAttribute('data-loaded');
+    root.className = '';
+    if (keep) root.dataset.loaded = '1';
+    else {
+      old.replaceWith(root);
+      window.scrollTo(0, 0);
+    }
     const res = await r.view(root, params, query());
+    if (keep && id === runId) {
+      const y = window.scrollY;
+      document.getElementById('view').replaceWith(root);
+      window.scrollTo(0, y);
+    }
     if (id === runId) current = res;
     else if (res && typeof res.destroy === 'function') res.destroy();
     afterEach?.(path);
@@ -65,8 +78,8 @@ export async function run() {
 }
 
 export function start() {
-  window.addEventListener('hashchange', run);
+  window.addEventListener('hashchange', () => run());
   run();
 }
 
-export const reload = () => run();
+export const reload = () => run({ keep: true });
