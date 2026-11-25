@@ -76,14 +76,33 @@ interface Relax {
   proteinFactor: number;
   distinctFactor: number; // множитель минимального разнообразия
   capShare: number; // доля max_g_day (средний вариант)
+  extraPerMeal: number; // прибавка к лимитам «продуктов в приёме» и «белковых в приёме»
 }
 
 const RELAX_LEVELS: Relax[] = [
-  { macroBand: 0.15, proteinFactor: 1, distinctFactor: 1, capShare: 0.6 },
-  { macroBand: 0.25, proteinFactor: 1, distinctFactor: 1, capShare: 0.6 },
-  { macroBand: 0.25, proteinFactor: 0.9, distinctFactor: 1, capShare: 0.6 },
-  { macroBand: 0.25, proteinFactor: 0.9, distinctFactor: 0.5, capShare: 1 }
+  { macroBand: 0.15, proteinFactor: 1, distinctFactor: 1, capShare: 0.6, extraPerMeal: 0 },
+  { macroBand: 0.25, proteinFactor: 1, distinctFactor: 1, capShare: 0.6, extraPerMeal: 0 },
+  { macroBand: 0.25, proteinFactor: 0.9, distinctFactor: 1, capShare: 0.6, extraPerMeal: 0 },
+  { macroBand: 0.25, proteinFactor: 0.9, distinctFactor: 0.5, capShare: 1, extraPerMeal: 1 }
 ];
+
+// ---------- Правила «настоящей еды» ----------
+/** Продуктов в одном приёме: основной/завтрак — до 4, перекус — до 2. */
+const ITEMS_PER_MEAL: Record<MealType, number> = { breakfast: 4, main: 4, snack: 2 };
+/** Минимум продуктов: завтрак и основной приём — не один продукт (не «обед = 300 г крыльев»). */
+const MIN_ITEMS_PER_MEAL: Record<MealType, number> = { breakfast: 2, main: 2, snack: 1 };
+/** Один продукт — не больше чем в двух приёмах за день. */
+const MEALS_PER_PRODUCT = 2;
+
+/** Минимальная порция, если продукт попал в приём: штучный — 1 шт, иначе ~⅓ дневного максимума (кратно 5 г). */
+export function minPortion(p: EngineProduct): number {
+  if (p.unit === 'pcs' && p.grams_per_piece) return p.grams_per_piece;
+  const g = Math.round((p.max_g_day * 0.35) / 5) * 5;
+  return Math.min(p.max_g_day, Math.max(5, Math.min(100, g)));
+}
+
+/** «Основной белок» (мясо, рыба, творог, брынза): в одном приёме — только один. */
+export const isMainProtein = (p: EngineProduct) => p.protein_100 >= 15 && p.carbs_100 < 10;
 
 const RELAX_NOTES = [
   '',
@@ -183,18 +202,57 @@ function buildModel(
   });
 
   const binaries: string[] = [];
+  const generals: string[] = [];
   const extraBounds: string[] = [];
   const usableCount = usable.filter(Boolean).length;
+
+  // Каждая пара (продукт, приём): либо продукта нет, либо это нормальная порция.
+  const zByProduct: string[][] = products.map(() => []);
+  const zByMeal: string[][] = meals.map(() => []);
+  const zProtByMeal: string[][] = meals.map(() => []);
+  for (const v of vars) {
+    const pr = products[v.p];
+    const z = v.name.replace('x_', 'z_');
+    binaries.push(z);
+    zByProduct[v.p].push(z);
+    zByMeal[v.m].push(z);
+    if (isMainProtein(pr)) zProtByMeal[v.m].push(z);
+    const hi = pr.max_g_day * (drop.has('max') ? 10 : 1);
+    const lo = Math.min(minPortion(pr), hi);
+    rows.push(`plo_${v.name}: ${expr([[1, v.name], [-lo, z]])} >= 0`);
+    rows.push(`phi_${v.name}: ${expr([[1, v.name], [-hi, z]])} <= 0`);
+    // Штучные — целыми штуками, весовые — шагом 5 г (решатель сам держит цели с учётом шага).
+    const step = pr.unit === 'pcs' && pr.grams_per_piece ? pr.grams_per_piece : 5;
+    const n = v.name.replace('x_', 'n_');
+    generals.push(n);
+    extraBounds.push(` 0 <= ${n} <= ${Math.ceil(hi / step)}`);
+    rows.push(`step_${v.name}: ${expr([[1, v.name], [-step, n]])} = 0`);
+  }
+  meals.forEach((ml, m) => {
+    const cap = ITEMS_PER_MEAL[ml.type] + relax.extraPerMeal;
+    if (zByMeal[m].length > cap) rows.push(`cnt_${m}: ${expr(zByMeal[m].map((z): [number, string] => [1, z]))} <= ${cap}`);
+    const need = relax.extraPerMeal ? 1 : MIN_ITEMS_PER_MEAL[ml.type];
+    if (need > 1 && zByMeal[m].length >= need) rows.push(`cntlo_${m}: ${expr(zByMeal[m].map((z): [number, string] => [1, z]))} >= ${need}`);
+    const pcap = 1 + relax.extraPerMeal;
+    if (zProtByMeal[m].length > pcap) rows.push(`prot1_${m}: ${expr(zProtByMeal[m].map((z): [number, string] => [1, z]))} <= ${pcap}`);
+  });
+  products.forEach((_, i) => {
+    if (zByProduct[i].length > MEALS_PER_PRODUCT) {
+      rows.push(`rep_${i}: ${expr(zByProduct[i].map((z): [number, string] => [1, z]))} <= ${MEALS_PER_PRODUCT}`);
+    }
+  });
+
   if (tier === 'middle' || tier === 'top') {
     const want = tier === 'middle' ? 8 : 12;
-    const minDistinct = Math.min(usableCount, Math.max(1, Math.floor(want * relax.distinctFactor)));
+    const slots = meals.reduce((s, ml) => s + ITEMS_PER_MEAL[ml.type] + relax.extraPerMeal, 0);
+    const minDistinct = Math.min(usableCount, slots, Math.max(1, Math.floor(want * relax.distinctFactor)));
     const ys: [number, string][] = [];
     products.forEach((pr, i) => {
       if (!usable[i]) return;
       const y = `y_${i}`;
       binaries.push(y);
       ys.push([1, y]);
-      rows.push(`link_${i}: ${expr([...byProduct[i].map((n): [number, string] => [1, n]), [-30, y]])} >= 0`);
+      rows.push(`link_${i}: ${expr([...zByProduct[i].map((z): [number, string] => [1, z]), [-1, y]])} >= 0`);
     });
     rows.push(`distinct: ${expr(ys)} >= ${minDistinct}`);
   }
@@ -225,6 +283,7 @@ function buildModel(
   bounds.push(...extraBounds);
 
   let lp = `${objective}\nSubject To\n${rows.map((r) => ' ' + r).join('\n')}\nBounds\n${bounds.join('\n')}\n`;
+  if (generals.length) lp += `General\n ${generals.join(' ')}\n`;
   if (binaries.length) lp += `Binary\n ${binaries.join(' ')}\n`;
   lp += 'End\n';
   return { lp, vars };
@@ -238,7 +297,7 @@ interface SolveOut {
 async function run(lp: string): Promise<SolveOut> {
   const h = await highs();
   try {
-    const r = h.solve(lp, { time_limit: 4, mip_rel_gap: 0.02, output_flag: false });
+    const r = h.solve(lp, { time_limit: 6, mip_rel_gap: 0.03, output_flag: false });
     const hasPrimal = r.Status === 'Optimal' || r.Status === 'Time limit reached';
     if (!hasPrimal) return { ok: false, values: new Map() };
     const values = new Map<string, number>();
@@ -273,8 +332,8 @@ function summarize(
   for (const v of model.vars) {
     const g = values.get(v.name) ?? 0;
     if (g < 0.5) continue;
-    const grams = Math.round(g * 10) / 10;
     const p = products[v.p];
+    const grams = Math.round(g * 10) / 10; // уже кратно 5 г или целым штукам
     items.push({ product_id: p.id, meal_no: v.m + 1, grams });
     const pm = perMeal[v.m];
     pm.kcal += (p.kcal_100 * grams) / 100;

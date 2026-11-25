@@ -47,6 +47,14 @@ function checkAge(age, kind) {
   if (!Number.isInteger(age) || age < min || age > max) throw new Error(`Возраст: целое число от ${min} до ${max}`);
 }
 
+/** Что ещё не заполнено для расчёта по формуле. */
+function missingHint(v) {
+  const miss = [!v.sex && 'пол', !v.age && 'возраст', !v.height_cm && 'рост', !v.weight_kg && 'вес'].filter(Boolean);
+  return miss.length
+    ? `Для расчёта не хватает: ${miss.join(', ')}. Или задайте калории вручную.`
+    : 'Пол, возраст, рост и вес — и цель рассчитается по формуле Миффлина — Сан-Жеора.';
+}
+
 /** Расчёт целей на клиенте — та же формула, что на сервере (для живого предпросмотра). */
 function previewTargets(v, kind) {
   if (kind === 'child') {
@@ -190,7 +198,7 @@ export async function person(root, { id }) {
         t
           ? html`<div class="stat"><div class="label">Цель в день</div><div class="hero md num">${fmt(t.kcal)} <span class="muted" style="font-size:16px;font-weight:500;letter-spacing:0">ккал</span></div></div>
             <div class="macro-row"><div><div class="l">Белки</div><div class="v num">${fmt(t.protein)} г</div></div><div><div class="l">Жиры</div><div class="v num">${fmt(t.fat)} г</div></div><div><div class="l">Углеводы</div><div class="v num">${fmt(t.carbs)} г</div></div></div>`
-          : html`<div class="empty-hint"><div class="icon-chip c-food">${icon('target')}</div><span>${kind === 'child' ? 'Укажите калорийность — покажем БЖУ.' : 'Пол, возраст, рост и вес — и цель рассчитается по формуле Миффлина — Сан-Жеора.'}</span></div>`
+          : html`<div class="empty-hint"><div class="icon-chip c-food">${icon('target')}</div><span>${kind === 'child' ? 'Укажите калорийность — покажем БЖУ.' : missingHint(vals)}</span></div>`
       );
     };
     drawPreview();
@@ -238,6 +246,7 @@ export async function person(root, { id }) {
           const vals = readFields(root, all);
           const { is_me: isMe, age, ...rest } = vals;
           const body = { ...rest, kind };
+          if (kind === 'adult' && !rest.sex && !rest.kcal_override) throw new Error('Выберите пол — без него не рассчитать калории');
           if (kind !== 'pet') {
             checkAge(age, kind);
             // Возраст не меняли — дату рождения не трогаем (иначе сдвинется день рождения).

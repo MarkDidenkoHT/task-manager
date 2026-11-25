@@ -253,11 +253,17 @@ export function foodRoutes(app: FastifyInstance) {
     for (const p of profiles) {
       const targets = computeTargets(p);
       if (!targets) {
+        const missing = [
+          !p.sex && 'пол',
+          !p.birth_date && 'возраст',
+          !p.height_cm && 'рост',
+          !p.weight_kg && 'вес'
+        ].filter(Boolean);
         throw new HttpError(
           400,
           p.kind === 'child'
             ? `Для ребёнка «${p.name}» укажите калорийность в профиле`
-            : `Заполните данные профиля «${p.name}» (пол, дата рождения, рост, вес) или задайте калории вручную`
+            : `В профиле «${p.name}» не указано: ${missing.join(', ') || 'данные'}. Заполните или задайте калории вручную`
         );
       }
       const meals = b.meals_per_day ?? p.meals_per_day ?? 3;
