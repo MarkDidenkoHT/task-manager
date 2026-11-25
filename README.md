@@ -32,8 +32,7 @@ Telegram ──открывает Mini App──> Render: Fastify (Node.js, Type
                                          v
                                   Supabase
                                   ├─ Postgres (RLS включён без политик; доступ только у сервера и функций)
-                                  ├─ Edge Function reminders     ← Supabase Cron раз в минуту, шлёт напоминания
-                                  └─ Edge Function telegram-bot  ← вебхук: кнопки «Готово / Отложить / Пропустить», /start
+                                  └─ Edge Function reminders  ← pg_cron раз в минуту; кнопки бота и /start
 ```
 
 - Личность пользователя — только из подписанного `initData` Telegram (HMAC-SHA256 на ключе из токена бота, срок 24 ч).
@@ -54,8 +53,8 @@ src/
 public/              фронтенд без фреймворка и сборки
 supabase/
   001_schema.sql, 002_seed_training.sql
-  functions/         Edge Functions: reminders, telegram-bot
-  config.toml        настройки функций
+  003_cron.sql       ежеминутный вызов функции
+  reminders.ts       Edge Function: напоминания и бот
 ```
 
 ## Запуск
@@ -81,18 +80,13 @@ supabase/
 
 Имя бота сервер узнаёт у Telegram сам. После деплоя в @BotFather: `/mybots → бот → Bot Settings → Configure Mini App` — укажите адрес сервиса (так работают ссылки-приглашения `t.me/<бот>?startapp=…`).
 
-### 4. Supabase: бот и напоминания
+### 4. Supabase: напоминания и бот
 
-```powershell
-npx supabase login
-npx supabase link --project-ref muzkjlwstmeodcoxtqlx
-npx supabase secrets set BOT_TOKEN=<токен> APP_URL=https://<сервис>.onrender.com
-npx supabase functions deploy reminders
-npx supabase functions deploy telegram-bot
-```
+1. **Edge Functions → Secrets**: добавьте `BOT_TOKEN` — токен бота.
+2. **Edge Functions → Deploy a new function → Via Editor**: имя `reminders`, вставьте содержимое `supabase/reminders.ts`, задеплойте. В настройках функции выключите **Enforce JWT Verification**.
+3. **SQL Editor**: выполните `supabase/003_cron.sql` — функция будет вызываться раз в минуту.
 
-1. Откройте один раз в браузере `https://muzkjlwstmeodcoxtqlx.supabase.co/functions/v1/telegram-bot?setup` — функция зарегистрирует себя вебхуком бота и поставит кнопку меню.
-2. **Integrations → Cron → Create job**: тип **Supabase Edge Function**, функция `reminders`, расписание `* * * * *` (каждую минуту).
+Функция сама регистрирует себя вебхуком бота: кнопки «Готово / Через 15 мин / Пропустить» и `/start` приходят на тот же адрес и проверяются секретом, выведенным из токена. Повторные вызовы безопасны — каждое напоминание уходит один раз в день.
 
 ### 5. Библиотека упражнений (необязательно)
 

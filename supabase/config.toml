@@ -1,9 +1,0 @@
-project_id = "muzkjlwstmeodcoxtqlx"
-
-# Напоминания вызывает Supabase Cron с ключом проекта — проверка JWT остаётся включённой.
-[functions.reminders]
-verify_jwt = true
-
-# Telegram не передаёт JWT; запрос проверяется секретом вебхука внутри функции.
-[functions.telegram-bot]
-verify_jwt = false
